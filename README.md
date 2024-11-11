@@ -1,4 +1,4 @@
-# BlueFox
+# BlueFox-Tools
 ![image](https://github.com/user-attachments/assets/0b446286-4341-4cd1-b2da-ed01948f89bc)
 
 
