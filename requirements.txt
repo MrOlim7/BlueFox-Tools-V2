@@ -1,3 +1,5 @@
 colorama
 requests
 pyfiglet
+pypresence
+scapy

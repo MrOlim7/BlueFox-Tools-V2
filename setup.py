@@ -6,6 +6,13 @@ setup(
     install_requires=[
         'colorama',
         'requests',
-        'pyfiglet'
+        'pyfiglet',
+        'os',
+        'time',
+        'pyfiglet',
+        'random',
+        'scapy.all',
+        'string',
+        'pypresence'
     ],
 )
