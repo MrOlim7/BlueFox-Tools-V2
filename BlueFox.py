@@ -6,7 +6,7 @@ import time
 import pyfiglet
 import random
 import time
-from scapy.all import sr1, IP, ICMP
+from ping3 import ping
 import string
 from pypresence import Presence
 
@@ -24,7 +24,7 @@ def update_rpc(state, details):
             state=state,
             details=details,
             large_image="large_image_name",
-            small_image="logo_bluefox",
+            small_image="logo_bluefox2",
             start=start_time
         )
     except Exception as e:
@@ -47,8 +47,12 @@ def search_social_media(username):
     urls = {
         "YouTube": f"https://www.youtube.com/results?search_query={username}",
         "Instagram": f"https://www.instagram.com/{username}/",
-        "Twitter": f"https://twitter.com/{username}"
+        "Twitter": f"https://twitter.com/{username}",
+        "Facebook": f"https://www.facebook.com/{username}",
+        "LinkedIn": f"https://www.linkedin.com/in/{username}",
+        "Pinterest": f"https://www.pinterest.com/{username}/"
     }
+
 
     for platform, url in urls.items():
         try:
@@ -75,19 +79,15 @@ def main():
         print(f"Une erreur s'est produite : {e}")
 
 def ip_pinger(ip):
-    update_rpc("IP Pinger", f"Ping de {ip}")
+    update_rpc("IP Pinger", f"Ping d'une IP")
     try:
-        print(f"Scanning IP: {ip}")
-        packet = IP(dst=ip)/ICMP()
-        response = sr1(packet, timeout=2, verbose=False)
-        if response is None:
-            print("No response received.")
-        else:
-            print(f"Response received from: {response.src}")
-            print(f"Response time: {response.time - packet.sent_time}s")
+        response_time = ping(ip, timeout=2)
+        if response_time is None :
+            print("Pas de réponse reçue.")
+        else :
+            print(f"Réponse reçue de {ip}: temps de réponse {response_time} ms")
     except Exception as e:
         print(f"Erreur lors du ping de l'IP: {e}")
-
 
 def generate_password(length):
     update_rpc("Générateur de Mots de Passe", f"Génération de {length} caractères")
@@ -140,9 +140,11 @@ def main():
             if choice == "01":
                 username = input("Entrez le pseudo: ")
                 search_social_media(username)
-                time.sleep(5) # Pause de 5 secondes
+                time.sleep(6) # Pause de 5 secondes
             elif choice == "02":
-                time.sleep(2) # Pause de 2 secondes
+                ip = input("Entrez l'adresse IP: ")
+                ip_pinger(ip)
+                time.sleep(6) # Pause de 2 secondes
             elif choice == "03":
                 password_generator()
             elif choice == "04":

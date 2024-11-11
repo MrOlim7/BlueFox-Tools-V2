@@ -3,3 +3,4 @@ requests
 pyfiglet
 pypresence
 scapy
+ping3

@@ -13,6 +13,7 @@ setup(
         'random',
         'scapy.all',
         'string',
-        'pypresence'
+        'pypresence',
+        'ping3'
     ],
 )
