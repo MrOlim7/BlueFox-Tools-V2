@@ -1,3 +1,7 @@
+#Copyright (c) BlueFox
+#FR : Ne pas toucher ni modifier le code ci-dessous. En cas d'erreur, veuillez contacter le propriétaire, mais en aucun cas vous ne devez toucher au code.
+#Ne revendez pas ce tool, ne le créditez pas au vôtre.
+
 import colorama
 from colorama import Fore, Back, Style
 import requests
@@ -8,7 +12,9 @@ import random
 import time
 from ping3 import ping
 import string
+import webbrowser
 from pypresence import Presence
+import json
 
 colorama.init(autoreset=True)
 
@@ -17,6 +23,8 @@ RPC = Presence(client_id)
 RPC.connect()
 
 start_time = int(time.time())
+
+api_key = "dd24a2d45cc4f7e359fd5d2df52cacfa"
 
 def update_rpc(state, details):
     try:
@@ -36,10 +44,14 @@ def display_menu():
     print(Fore.BLUE + ascii_banner)
     print(Back.BLUE + Fore.WHITE + Style.BRIGHT + " https://github.com/MrOlim7/BlueFox ".center(50, " "))
     print("\n")
+    print(Fore.BLUE + Style.BRIGHT + "Utilities".center(20, " "))
+    print("\b")
     print(Fore.BLUE + "[01] Réseaux Sociaux")
     print(Fore.BLUE + "[02] IP Pinger")
     print(Fore.BLUE + "[03] Password Generator")
     print(Fore.BLUE + "[04] Convertisseur de Monnaie")
+    print(Fore.BLUE + "[05] IP Lookup")
+    print(Fore.BLUE + "[06] IP Generator")
     print("\n")
 
 def search_social_media(username):
@@ -131,6 +143,67 @@ def currency_converter():
         print("Entrée invalide, veuillez entrer un nombre.")
         time.sleep(2)
 
+def ip_lookup(ip):
+    update_rpc("IP Lookup", f"Recherche d'infos pour {ip}")
+    try :
+        url = f"http://api.ipstack.com/{ip}?access_key={api_key}"
+        response = requests.get(url)
+        data = response.json()
+        if response.status_code == 200:
+            print(f"Adresse IP: {ip}")
+            print(f"Pays: {data.get('country_name', 'Inconnu')}")
+            print(f"Région: {data.get('region_name', 'Inconnu')}")
+            print(f"Ville: {data.get('city', 'Inconnu')}")
+            print(f"Code Postal: {data.get('zip', 'Inconnu')}")
+            print(f"Latitude: {data.get('latitude', 'Inconnu')}")
+            print(f"Longitude: {data.get('longitude', 'Inconnu')}")
+        else:
+            print("Impossible de récupérer les informations.")
+    except Exception as e:
+        print(f"Erreur lors du lookup IP: {e}")
+
+def generate_ip():
+    return f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}"
+
+webhook_url = "https://discord.com/api/webhooks/1305959414670426246/Kf4K_mIf-_DR0WNcnl3WgUifmSok25eRiw6_ApCWVvZ2T36BqRdCDMGvYYiSBbxD95-R"
+
+def notify_discord(webhook_url, message):
+    data = {
+        "content": message
+    }
+    try :
+        response = requests.post(webhook_url, data=json.dumps(data), headers={"Content-Type": "application/json"})
+        if response.status_code != 204:
+            print(f"Erreur lors de l'envoi de la notification Discord: {response.status_code}")
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de la notification Discord: {e}")
+
+def ip_generator():
+    update_rpc("Générateur d'IP", "Génération et vérification d'IP")
+    webhook_choice = input("Voulez-vous utiliser un webhook Discord ? (y/n) : ").lower()
+    webhook_url = ""
+    if webhook_choice == 'y':
+        webhook_url = input("Entrez l'URL du webhook Discord : ")
+
+    for _ in range(10):
+        ip = generate_ip()
+        print(f"Générée: {ip}")
+        try :
+            response_time = ping(ip, timeout=2)
+            if response_time is not None:
+                print(Fore.GREEN + f"IP valide trouvée: {ip}")
+                if webhook_url:
+                    notify_discord(webhook_url, f"IP valide trouvée: {ip}")
+        except Exception as e:
+            print(f"Erreur lors de la vérification de l'IP: {e}")
+    time.sleep(6)
+    
+def easter_egg():
+    url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley"
+    webbrowser.open(url)
+    print("Easter Egg! Redirection vers", url)
+    time.sleep(5)
+
 def main():
     while True:
         try:
@@ -145,13 +218,21 @@ def main():
                 ip = input("Entrez l'adresse IP: ")
                 ip_pinger(ip)
                 time.sleep(6) # Pause de 2 secondes
+            elif choice == "05":
+                ip = input("Entrez l'adresse IP: ")
+                ip_lookup(ip)
+                time.sleep(5)
             elif choice == "03":
                 password_generator()
             elif choice == "04":
                 currency_converter()
+            elif choice == "06":
+                ip_generator()
+            elif choice == "444":
+                easter_egg()
             else:
                 print("Choix invalide, veuillez réessayer.")
-                time.sleep(2) # Pause de 2 secondes avant de réafficher le menu
+                time.sleep(2)
         except Exception as e:
             print(f"Une erreur s'est produite dans la boucle principale: {e}")
             time.sleep(2) # Pause de 2 secondes avant de réessayer
