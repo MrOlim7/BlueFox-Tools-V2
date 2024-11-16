@@ -1,6 +1,6 @@
 # BlueFox-Tools
-![image](![image](https://github.com/user-attachments/assets/ae10b96f-ef14-4d23-9f71-7ba8c2bc783d)
-)
+(![image](https://github.com/user-attachments/assets/ae10b96f-ef14-4d23-9f71-7ba8c2bc783d)
+
 
 
 The Official Code of Blue Fox.
