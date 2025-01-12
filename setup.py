@@ -1,19 +1,14 @@
 from setuptools import setup
 
 setup(
-    name='bluefox',
-    version='1.0',
+    name='BlueFox',
+    version='2.0',
     install_requires=[
-        'colorama',
+        'pystyle',
         'requests',
-        'pyfiglet',
-        'os',
-        'time',
-        'pyfiglet',
-        'random',
-        'scapy.all',
-        'string',
+        'whois',
+        're',
+        'platform',
         'pypresence',
-        'ping3'
     ],
 )
