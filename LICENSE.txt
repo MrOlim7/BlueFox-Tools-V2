@@ -1,4 +1,5 @@
 BLUEFOX PUBLIC LISCENSE 
+Version 1, Janv 2025
 
 Copyright 2025 (C)
 Olim Corporation (C)
