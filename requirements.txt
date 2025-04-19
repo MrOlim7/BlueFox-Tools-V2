@@ -1,4 +1,5 @@
 colorama
+pystyle
 requests
 pyfiglet
 pypresence
