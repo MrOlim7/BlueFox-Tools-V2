@@ -1,4 +1,4 @@
 @echo off
 echo Lancement de BlueFox...
-python BlueFox.py
+python BlueFoxV2.py
 pause
