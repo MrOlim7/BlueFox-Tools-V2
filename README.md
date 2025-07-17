@@ -1,7 +1,5 @@
 # BlueFox-Tools
-![image](https://github.com/user-attachments/assets/ae10b96f-ef14-4d23-9f71-7ba8c2bc783d)
-
-
+<img width="437" height="212" alt="f63c691c108f86dec71d69f3c47a8829" src="https://github.com/user-attachments/assets/d89ba023-8346-4209-904e-e49de34ee14d" />
 
 The Official Code of Blue Fox.
 BlueFox Never Die !
