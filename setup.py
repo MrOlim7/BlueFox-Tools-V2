@@ -6,9 +6,10 @@ setup(
     install_requires=[
         'pystyle',
         'requests',
-        'whois',
-        're',
-        'platform',
+        'python-whois',
+        'dnspython',
+        'Pillow',
+        'beautifulsoup4',
         'pypresence',
     ],
 )
