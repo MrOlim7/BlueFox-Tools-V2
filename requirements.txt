@@ -1,7 +1,7 @@
-colorama
-pystyle
 requests
-pyfiglet
+pystyle
+python-whois
+dnspython
+beautifulsoup4
+Pillow
 pypresence
-scapy
-ping3
