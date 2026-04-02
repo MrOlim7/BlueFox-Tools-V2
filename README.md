@@ -8,6 +8,7 @@ BlueFox Tools is a tool developed for STRICTLY EDUCATIONAL purposes and for PERS
 BlueFox is an intelligence service that is used to find a person's social networks using their nickname. BlueFox is a Cybersecurity tool that should not be used for bad intentions. Thank you for your attention to this project.
 
 For donation :
+
 Bitcoin adress :
 ```
 bc1q8urqhsnlt0h43ufs5et5ajxjaekngs6dt3udd7
