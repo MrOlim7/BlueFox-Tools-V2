@@ -91,3 +91,18 @@ Please read [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) before opening a PR.
 ## License
 
 See [LICENSE](LICENSE).
+
+## Donation
+
+Bitcoin adress :
+```
+bc1q8urqhsnlt0h43ufs5et5ajxjaekngs6dt3udd7
+```
+Ethereum adress :
+```
+0x9CC941d1A9173867cd50248f2d886C55E265aD98
+```
+Solana adress :
+```
+DAonu76tu3XfyTnGX5MDD1gfLJj9QHYeeNaavu7TB9NQ
+```
