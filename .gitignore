@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+Program/bluefox_config.json
+results/
+
+venv/
+.venv/
+env/
