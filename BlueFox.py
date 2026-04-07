@@ -26,57 +26,83 @@ def wipe():
     core.clear()
 
 
-def slow_print(lines, delay=0.02):
-    for line in lines:
-        print(line)
-        time.sleep(delay)
+def center_line(text, width=76):
+    return text.center(width)
 
 
 def boot_sequence():
-    frames = [
-        "[*] Initializing BlueFox core...",
-        "[/] Loading network modules...",
-        "[-] Loading OSINT modules...",
-        "[\\] Syncing configuration...",
-        "[|] Preparing hacker UI...",
-        "[>] Launch complete.",
+    code_stream = [
+        "import core.runtime",
+        "load module network.scan",
+        "load module osint.lookup",
+        "load module web.recon",
+        "establish rpc tunnel",
+        "hydrate local settings",
+        "verify api keys state",
+        "prepare ui renderer",
+        "compile menu registry",
+        "arming bluefox shell",
     ]
-    for _ in range(2):
-        for frame in frames:
-            wipe()
-            print(core.color("\n  " + "=" * 66))
-            print(core.color("  BlueFox v" + APP_VERSION))
-            print(core.color("  " + "-" * 66))
-            print(core.color(f"  {frame}"))
-            print(core.color("  " + "." * 66))
-            time.sleep(0.08)
+
+    for idx in range(24):
+        wipe()
+        print(core.color("┌" + "─" * 78 + "┐"))
+        print(core.color("│ " + center_line("TERMINAL BOOTSTREAM", 76) + " │"))
+        print(core.color("├" + "─" * 78 + "┤"))
+        for i in range(12):
+            stream_index = (idx + i) % len(code_stream)
+            left = f"[{(idx+i):02d}]"
+            line = f"{left} {code_stream[stream_index]} ; status=ok"
+            print(core.color("│ " + line.ljust(76) + " │"))
+        print(core.color("├" + "─" * 78 + "┤"))
+        bar_len = (idx % 11) + 1
+        bar = ("#" * bar_len).ljust(11)
+        print(core.color(f"│ loading [{bar}]  bluefox-core v{APP_VERSION:<45} │"))
+        print(core.color("└" + "─" * 78 + "┘"))
+        time.sleep(0.05)
+
+    for blink in range(6):
+        wipe()
+        print()
+        print(core.color(center_line("██████  ██      ██    ██  ████████  ███████  ██████  ██   ██")))
+        print(core.color(center_line("██   ██ ██      ██    ██  ██        ██      ██    ██  ██ ██ ")))
+        print(core.color(center_line("██████  ██      ██    ██  ██████    █████   ██    ██   ███  ")))
+        print(core.color(center_line("██   ██ ██      ██    ██  ██        ██      ██    ██  ██ ██ ")))
+        print(core.color(center_line("██████  ███████  ██████   ████████  ██       ██████  ██   ██")))
+        print()
+        if blink % 2 == 0:   
+            print(core.color(center_line(f"BlueFox {APP_VERSION}")))
+            print(core.color(center_line("PRESS ENTER TO START")))
+        time.sleep(0.18)
+
+    input(core.color("\n" + center_line(">> Press Enter to Start BlueFox <<") + "\n"))
     wipe()
 
 
 def animated_banner():
     wipe()
     print(core.color(BANNER))
-    print(core.color("  " + "=" * 66))
-    print(core.color(f"  BlueFox v{APP_VERSION} | Network / OSINT / Web Recon"))
-    print(core.color(f"  {time.strftime('%Y-%m-%d %H:%M:%S')}"))
-    print(core.color("  " + "=" * 66))
+    print(core.color("┏" + "━" * 78 + "┓"))
+    print(core.color("┃ " + center_line(f"BlueFox v{APP_VERSION} | Network | OSINT | Recon", 76) + " ┃"))
+    print(core.color("┃ " + center_line(time.strftime('%Y-%m-%d %H:%M:%S'), 76) + " ┃"))
+    print(core.color("┗" + "━" * 78 + "┛"))
 
 
 def transition(label):
-    frames = ["[·    ]", "[··   ]", "[···  ]", "[···· ]", "[·····]"]
-    for frame in frames:
+    frames = ["[>      ]", "[>>     ]", "[>>>    ]", "[ >>>>  ]", "[  >>>>>]", "[   >>>>]"]
+    for frame in frames * 2:
         wipe()
-        print(core.color("\n  " + "=" * 66))
-        print(core.color(f"  {label} {frame}"))
-        print(core.color("  " + "=" * 66))
-        time.sleep(0.05)
+        print(core.color("\n  " + "╔" + "═" * 78 + "╗"))
+        print(core.color(f"  ║ {label:<58} {frame:<16} ║"))
+        print(core.color("  " + "╚" + "═" * 78 + "╝"))
+        time.sleep(0.035)
 
 
 def render_category_card(index, key, cat):
     name = cat["name"]
     desc = cat["description"]
     count = len(cat["tools"])
-    return core.color(f"  [{index}] {name:<24} {count:>2} tools  |  {desc}")
+    return core.color(f"  [{index:02d}] {name:<26} {count:>2} tools | {desc}")
 
 
 def main_menu():
@@ -89,6 +115,7 @@ def main_menu():
 
     print(core.color("\n  [S] Settings / API Keys"))
     print(core.color("  [Q] Quit"))
+    print(core.color("  " + "-" * 80))
     return keys
 
 
@@ -98,17 +125,18 @@ def category_menu(cat_key):
     title = cat["name"]
     tools = cat["tools"]
 
-    print(core.color("\n  " + "=" * 66))
-    print(core.color(f"  {title}"))
-    print(core.color(f"  {cat['description']}"))
-    print(core.color("  " + "=" * 66))
+    print(core.color("\n  " + "╔" + "═" * 78 + "╗"))
+    print(core.color(f"  ║ {title:<76} ║"))
+    print(core.color(f"  ║ {cat['description']:<76} ║"))
+    print(core.color("  " + "╚" + "═" * 78 + "╝"))
     print()
 
     for i, (name, _) in enumerate(tools, 1):
-        prefix = f"  [{i:02d}]"
-        print(core.color(f"{prefix} {name}"))
+        prefix = f"[{i:02d}]"
+        print(core.color(f"  {prefix} {name}"))
 
     print(core.color("\n  [B] Back"))
+    print(core.color("  " + "-" * 80))
     return tools
 
 
@@ -121,6 +149,8 @@ def hacker_settings():
         print(core.color("  " + "=" * 66))
         print()
 
+        current_theme = core.CONFIG.get("ui_theme", "blue")
+        print(core.color(f"  Interface theme: {current_theme}"))
         for key, meta in settings.API_KEY_FIELDS.items():
             value = settings.CONFIG.get(key, "")
             status = "OK" if value else "EMPTY"
@@ -131,6 +161,7 @@ def hacker_settings():
         print(core.color("  [3] Max workers"))
         print(core.color("  [4] Reset API keys"))
         print(core.color("  [5] Open API links"))
+        print(core.color("  [6] Interface color theme"))
         print(core.color("  [B] Back"))
 
         choice = core.get_input("Choice").lower()
@@ -190,6 +221,28 @@ def hacker_settings():
             core.pause()
             continue
 
+        if choice == "6":
+            print(core.color("\n  Themes disponibles:"))
+            for idx, theme_key in enumerate(core.THEME_PRESETS.keys(), 1):
+                marker = "*" if core.CONFIG.get("ui_theme", "blue") == theme_key else " "
+                print(core.color(f"  [{idx}] {marker} {theme_key}"))
+            selected = core.get_input("Theme (numéro ou nom)")
+            theme_key = None
+            if selected.isdigit():
+                items = list(core.THEME_PRESETS.keys())
+                if 1 <= int(selected) <= len(items):
+                    theme_key = items[int(selected) - 1]
+            elif selected.strip().lower() in core.THEME_PRESETS:
+                theme_key = selected.strip().lower()
+
+            if theme_key and core.set_ui_theme(theme_key):
+                settings.save_local_config()
+                core.print_success(f"Theme set to {theme_key}")
+            else:
+                core.print_error("Theme invalide")
+            core.pause()
+            continue
+
         core.print_error("Invalid choice")
         time.sleep(0.8)
 
@@ -217,6 +270,7 @@ def main():
             if choice == "q":
                 wipe()
                 print(core.color("\n  Thanks for using BlueFox.\n"))
+                core.close_rpc()
                 sys.exit(0)
 
             if choice == "s":
@@ -250,6 +304,7 @@ def main():
         except KeyboardInterrupt:
             wipe()
             print(core.color("\n  Bye.\n"))
+            core.close_rpc()
             sys.exit(0)
 
 

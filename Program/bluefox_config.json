@@ -1,5 +1,6 @@
 {
-  "version": "2.3 beta",
+  "version": "2.4 beta",
+  "ui_theme": "green",
   "results_folder": "results",
   "max_workers": 200,
   "ipgeo_api_key": "",

@@ -13,6 +13,11 @@ Version highlights:
 - New web recon tools and extra network utilities
 - Cleaner menu routing and updated version branding
 - Reworked project layout with `Program/` modules
+- Interface theme selector in settings
+- New `Discovery Lab` category for DNS, web, and sweep tools
+- New `Intel & Forensics` category with IOC/hash/password/permutation utilities
+- Intro boot animation with `Press Enter to Start` gate
+- Tool entrypoints are now split under `Program/tools/` (one file per option)
 
 For donation :
 

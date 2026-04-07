@@ -8,6 +8,7 @@ import requests
 import socket
 import platform
 import concurrent.futures
+import atexit
 import re
 import os
 import sys
@@ -18,7 +19,7 @@ import ssl
 import csv
 import base64
 from datetime import datetime
-from urllib.parse import urlparse, quote_plus
+from urllib.parse import urlparse, quote_plus, quote
 
 # ============================================================
 #  IMPORTS OPTIONNELS
@@ -95,6 +96,7 @@ API_KEY_FIELDS = {
 CONFIG = {
     "version": "2.4 beta",
     "client_id": "1305534641200959600",
+    "ui_theme": os.getenv("BLUEFOX_THEME", "blue"),
     "ipgeo_api_key": os.getenv("IPGEO_API_KEY", ""),
     "abuseipdb_api_key": os.getenv("ABUSEIPDB_API_KEY", ""),
     "shodan_api_key": os.getenv("SHODAN_API_KEY", ""),
@@ -103,6 +105,14 @@ CONFIG = {
     "numverify_api_key": os.getenv("NUMVERIFY_API_KEY", ""),
     "results_folder": "results",
     "max_workers": 200,
+}
+
+THEME_PRESETS = {
+    "blue": {"primary": "blue_to_cyan", "secondary": "blue_to_red"},
+    "cyan": {"primary": "cyan_to_blue", "secondary": "cyan_to_red"},
+    "green": {"primary": "green_to_cyan", "secondary": "green_to_yellow"},
+    "red": {"primary": "red_to_yellow", "secondary": "red_to_blue"},
+    "purple": {"primary": "purple_to_blue", "secondary": "purple_to_red"},
 }
 
 
@@ -118,6 +128,7 @@ def load_local_config():
         return
 
     for key in [
+        "ui_theme",
         "ipgeo_api_key",
         "abuseipdb_api_key",
         "shodan_api_key",
@@ -139,6 +150,7 @@ def load_local_config():
 def save_local_config():
     data = {
         "version": CONFIG["version"],
+        "ui_theme": CONFIG.get("ui_theme", "blue"),
         "results_folder": CONFIG["results_folder"],
         "max_workers": CONFIG["max_workers"],
     }
@@ -161,17 +173,42 @@ def mask_secret(value):
         return "*" * len(value)
     return f"{value[:4]}...{value[-4:]}"
 
+
+def set_ui_theme(theme_name):
+    theme_name = (theme_name or "").strip().lower()
+    if theme_name in THEME_PRESETS:
+        CONFIG["ui_theme"] = theme_name
+        return True
+    return False
+
+
+def _theme_color_slot(slot, fallback_attr):
+    if not HAS_PYSTYLE:
+        return None
+
+    theme_name = CONFIG.get("ui_theme", "blue")
+    preset = THEME_PRESETS.get(theme_name, THEME_PRESETS["blue"])
+    attr_name = preset.get(slot, fallback_attr)
+    color_value = getattr(Colors, attr_name, None)
+    if color_value is None:
+        color_value = getattr(Colors, fallback_attr, None)
+    return color_value
+
 # ============================================================
 #  COULEURS & AFFICHAGE
 # ============================================================
 def color(text):
     if HAS_PYSTYLE:
-        return Colorate.Horizontal(Colors.blue_to_cyan, text)
+        palette = _theme_color_slot("primary", "blue_to_cyan")
+        if palette:
+            return Colorate.Horizontal(palette, text)
     return text
 
 def color2(text):
     if HAS_PYSTYLE:
-        return Colorate.Horizontal(Colors.blue_to_red, text)
+        palette = _theme_color_slot("secondary", "blue_to_red")
+        if palette:
+            return Colorate.Horizontal(palette, text)
     return text
 
 def center(text):
@@ -283,6 +320,21 @@ def update_rpc(state, details):
         except:
             pass
 
+
+def close_rpc():
+    global RPC
+    if RPC:
+        try:
+            if hasattr(RPC, "close"):
+                RPC.close()
+        except:
+            pass
+        finally:
+            RPC = None
+
+
+atexit.register(close_rpc)
+
 # ============================================================
 #  SAUVEGARDE DES RÉSULTATS
 # ============================================================
@@ -292,7 +344,10 @@ def ensure_results_folder():
 def save_result(filename, data, fmt="json"):
     ensure_results_folder()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filepath = os.path.join(CONFIG["results_folder"], f"{filename}_{timestamp}.{fmt}")
+    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(filename)).strip("._")
+    if not safe_name:
+        safe_name = "result"
+    filepath = os.path.join(CONFIG["results_folder"], f"{safe_name}_{timestamp}.{fmt}")
     
     try:
         if fmt == "json":
@@ -921,50 +976,52 @@ def username_lookup():
     username = get_input("Nom d'utilisateur à rechercher")
     if not username:
         return
+    raw_username = username.strip()
+    safe_username = quote(raw_username, safe="")
     update_rpc("Username Lookup", f"Recherche de {username}")
     print_header(f"USERNAME LOOKUP - {username}")
     
     platforms = {
-        "GitHub": f"https://github.com/{username}",
-        "Twitter/X": f"https://x.com/{username}",
-        "Instagram": f"https://instagram.com/{username}",
-        "Reddit": f"https://reddit.com/user/{username}",
-        "TikTok": f"https://tiktok.com/@{username}",
-        "YouTube": f"https://youtube.com/@{username}",
-        "Twitch": f"https://twitch.tv/{username}",
-        "Pinterest": f"https://pinterest.com/{username}",
-        "Spotify": f"https://open.spotify.com/user/{username}",
-        "SoundCloud": f"https://soundcloud.com/{username}",
-        "Medium": f"https://medium.com/@{username}",
-        "DeviantArt": f"https://deviantart.com/{username}",
-        "Flickr": f"https://flickr.com/people/{username}",
-        "Vimeo": f"https://vimeo.com/{username}",
-        "GitLab": f"https://gitlab.com/{username}",
-        "Bitbucket": f"https://bitbucket.org/{username}",
-        "Steam": f"https://steamcommunity.com/id/{username}",
-        "Xbox Gamertag": f"https://xboxgamertag.com/search/{username}",
-        "Keybase": f"https://keybase.io/{username}",
-        "About.me": f"https://about.me/{username}",
-        "Patreon": f"https://patreon.com/{username}",
-        "Dribbble": f"https://dribbble.com/{username}",
-        "Behance": f"https://behance.net/{username}",
-        "HackerOne": f"https://hackerone.com/{username}",
-        "BugCrowd": f"https://bugcrowd.com/{username}",
-        "Replit": f"https://replit.com/@{username}",
-        "Roblox (approx)": f"https://www.roblox.com/search/users?keyword={username}",
-        "Minecraft (NameMC)": f"https://namemc.com/profile/{username}",
-        "Chess.com": f"https://chess.com/member/{username}",
-        "Lichess": f"https://lichess.org/@/{username}",
-        "Telegram (approx)": f"https://t.me/{username}",
-        "Snapchat": f"https://snapchat.com/add/{username}",
-        "Cash App": f"https://cash.app/${username}",
-        "MyAnimeList": f"https://myanimelist.net/profile/{username}",
-        "AniList": f"https://anilist.co/user/{username}",
-        "NPM": f"https://npmjs.com/~{username}",
-        "PyPI": f"https://pypi.org/user/{username}",
-        "Docker Hub": f"https://hub.docker.com/u/{username}",
-        "Gravatar": f"https://gravatar.com/{username}",
-        "Linktree": f"https://linktr.ee/{username}",
+        "GitHub": f"https://github.com/{safe_username}",
+        "Twitter/X": f"https://x.com/{safe_username}",
+        "Instagram": f"https://instagram.com/{safe_username}",
+        "Reddit": f"https://reddit.com/user/{safe_username}",
+        "TikTok": f"https://tiktok.com/@{safe_username}",
+        "YouTube": f"https://youtube.com/@{safe_username}",
+        "Twitch": f"https://twitch.tv/{safe_username}",
+        "Pinterest": f"https://pinterest.com/{safe_username}",
+        "Spotify": f"https://open.spotify.com/user/{safe_username}",
+        "SoundCloud": f"https://soundcloud.com/{safe_username}",
+        "Medium": f"https://medium.com/@{safe_username}",
+        "DeviantArt": f"https://deviantart.com/{safe_username}",
+        "Flickr": f"https://flickr.com/people/{safe_username}",
+        "Vimeo": f"https://vimeo.com/{safe_username}",
+        "GitLab": f"https://gitlab.com/{safe_username}",
+        "Bitbucket": f"https://bitbucket.org/{safe_username}",
+        "Steam": f"https://steamcommunity.com/id/{safe_username}",
+        "Xbox Gamertag": f"https://xboxgamertag.com/search/{safe_username}",
+        "Keybase": f"https://keybase.io/{safe_username}",
+        "About.me": f"https://about.me/{safe_username}",
+        "Patreon": f"https://patreon.com/{safe_username}",
+        "Dribbble": f"https://dribbble.com/{safe_username}",
+        "Behance": f"https://behance.net/{safe_username}",
+        "HackerOne": f"https://hackerone.com/{safe_username}",
+        "BugCrowd": f"https://bugcrowd.com/{safe_username}",
+        "Replit": f"https://replit.com/@{safe_username}",
+        "Roblox (approx)": f"https://www.roblox.com/search/users?keyword={quote(raw_username)}",
+        "Minecraft (NameMC)": f"https://namemc.com/profile/{safe_username}",
+        "Chess.com": f"https://chess.com/member/{safe_username}",
+        "Lichess": f"https://lichess.org/@/{safe_username}",
+        "Telegram (approx)": f"https://t.me/{safe_username}",
+        "Snapchat": f"https://snapchat.com/add/{safe_username}",
+        "Cash App": f"https://cash.app/${safe_username}",
+        "MyAnimeList": f"https://myanimelist.net/profile/{safe_username}",
+        "AniList": f"https://anilist.co/user/{safe_username}",
+        "NPM": f"https://npmjs.com/~{safe_username}",
+        "PyPI": f"https://pypi.org/user/{safe_username}",
+        "Docker Hub": f"https://hub.docker.com/u/{safe_username}",
+        "Gravatar": f"https://gravatar.com/{safe_username}",
+        "Linktree": f"https://linktr.ee/{safe_username}",
     }
     
     found = {}
@@ -978,7 +1035,15 @@ def username_lookup():
     def check_platform(name, url):
         try:
             r = requests.get(url, headers=headers, timeout=8, allow_redirects=True)
+            if r.status_code in [403, 429, 451]:
+                return (name, url, f"BLOCKED_{r.status_code}")
             if r.status_code == 200:
+                if r.url.endswith("/"):
+                    lower_text = r.text.lower()
+                    if "not found" in lower_text or "doesn't exist" in lower_text or \
+                       "page not found" in lower_text or "user not found" in lower_text or \
+                       "no results" in lower_text:
+                        return (name, url, "NOT_FOUND")
                 return (name, url, "FOUND")
             elif r.status_code == 404:
                 return (name, url, "NOT_FOUND")
@@ -1021,7 +1086,7 @@ def username_lookup():
     print(color(f"\n  {'─' * 50}"))
     print_info(f"Non trouvés: {len(not_found)} plateformes")
     
-    ask_save(f"username_{username}", {"found": found, "not_found": not_found, "errors": dict(errors)})
+    ask_save(f"username_{raw_username}", {"found": found, "not_found": not_found, "errors": dict(errors)})
 
 def email_osint():
     email = get_input("Adresse email")
@@ -1707,66 +1772,68 @@ def social_media_lookup():
     username = get_input("Nom d'utilisateur à rechercher")
     if not username:
         return
+    raw_username = username.strip()
+    safe_username = quote(raw_username, safe="")
     update_rpc("Social Media", f"Recherche {username}")
     print_header(f"SOCIAL MEDIA LOOKUP - {username}")
     
     platforms = {
         # Format: (url, nom)
-        "GitHub": f"https://github.com/{username}",
-        "Twitter/X": f"https://x.com/{username}",
-        "Instagram": f"https://instagram.com/{username}",
-        "Facebook": f"https://facebook.com/{username}",
-        "LinkedIn": f"https://linkedin.com/in/{username}",
-        "Reddit": f"https://reddit.com/user/{username}",
-        "YouTube": f"https://youtube.com/@{username}",
-        "TikTok": f"https://tiktok.com/@{username}",
-        "Pinterest": f"https://pinterest.com/{username}",
-        "Twitch": f"https://twitch.tv/{username}",
-        "Snapchat": f"https://snapchat.com/add/{username}",
-        "Telegram": f"https://t.me/{username}",
-        "Medium": f"https://medium.com/@{username}",
-        "DeviantArt": f"https://deviantart.com/{username}",
-        "Flickr": f"https://flickr.com/people/{username}",
-        "SoundCloud": f"https://soundcloud.com/{username}",
-        "Spotify": f"https://open.spotify.com/user/{username}",
-        "Steam": f"https://steamcommunity.com/id/{username}",
-        "Xbox": f"https://xboxgamertag.com/search/{username}",
-        "Roblox": f"https://www.roblox.com/search/users?keyword={username}",
-        "Minecraft": f"https://namemc.com/profile/{username}",
-        "HackTheBox": f"https://app.hackthebox.com/users/{username}",
-        "TryHackMe": f"https://tryhackme.com/p/{username}",
-        "Keybase": f"https://keybase.io/{username}",
-        "Gravatar": f"https://gravatar.com/{username}",
-        "About.me": f"https://about.me/{username}",
-        "GitLab": f"https://gitlab.com/{username}",
-        "Bitbucket": f"https://bitbucket.org/{username}",
-        "Docker Hub": f"https://hub.docker.com/u/{username}",
-        "npm": f"https://www.npmjs.com/~{username}",
-        "PyPI": f"https://pypi.org/user/{username}",
-        "Stack Overflow": f"https://stackoverflow.com/users/?q={username}",
-        "Pastebin": f"https://pastebin.com/u/{username}",
-        "Replit": f"https://replit.com/@{username}",
-        "CodePen": f"https://codepen.io/{username}",
-        "Dribbble": f"https://dribbble.com/{username}",
-        "Behance": f"https://behance.net/{username}",
-        "Vimeo": f"https://vimeo.com/{username}",
-        "Dailymotion": f"https://dailymotion.com/{username}",
-        "VK": f"https://vk.com/{username}",
-        "OK.ru": f"https://ok.ru/{username}",
-        "Quora": f"https://quora.com/profile/{username}",
-        "Clubhouse": f"https://joinclubhouse.com/@{username}",
-        "Cash App": f"https://cash.app/${username}",
-        "Venmo": f"https://venmo.com/{username}",
-        "Fiverr": f"https://fiverr.com/{username}",
-        "Upwork": f"https://upwork.com/freelancers/~{username}",
-        "9GAG": f"https://9gag.com/u/{username}",
-        "MyAnimeList": f"https://myanimelist.net/profile/{username}",
-        "Wattpad": f"https://wattpad.com/user/{username}",
-        "Goodreads": f"https://goodreads.com/{username}",
-        "Last.fm": f"https://last.fm/user/{username}",
-        "Letterboxd": f"https://letterboxd.com/{username}",
-        "Chess.com": f"https://chess.com/member/{username}",
-        "Lichess": f"https://lichess.org/@/{username}",
+        "GitHub": f"https://github.com/{safe_username}",
+        "Twitter/X": f"https://x.com/{safe_username}",
+        "Instagram": f"https://instagram.com/{safe_username}",
+        "Facebook": f"https://facebook.com/{safe_username}",
+        "LinkedIn": f"https://linkedin.com/in/{safe_username}",
+        "Reddit": f"https://reddit.com/user/{safe_username}",
+        "YouTube": f"https://youtube.com/@{safe_username}",
+        "TikTok": f"https://tiktok.com/@{safe_username}",
+        "Pinterest": f"https://pinterest.com/{safe_username}",
+        "Twitch": f"https://twitch.tv/{safe_username}",
+        "Snapchat": f"https://snapchat.com/add/{safe_username}",
+        "Telegram": f"https://t.me/{safe_username}",
+        "Medium": f"https://medium.com/@{safe_username}",
+        "DeviantArt": f"https://deviantart.com/{safe_username}",
+        "Flickr": f"https://flickr.com/people/{safe_username}",
+        "SoundCloud": f"https://soundcloud.com/{safe_username}",
+        "Spotify": f"https://open.spotify.com/user/{safe_username}",
+        "Steam": f"https://steamcommunity.com/id/{safe_username}",
+        "Xbox": f"https://xboxgamertag.com/search/{safe_username}",
+        "Roblox": f"https://www.roblox.com/search/users?keyword={quote(raw_username)}",
+        "Minecraft": f"https://namemc.com/profile/{safe_username}",
+        "HackTheBox": f"https://app.hackthebox.com/users/{safe_username}",
+        "TryHackMe": f"https://tryhackme.com/p/{safe_username}",
+        "Keybase": f"https://keybase.io/{safe_username}",
+        "Gravatar": f"https://gravatar.com/{safe_username}",
+        "About.me": f"https://about.me/{safe_username}",
+        "GitLab": f"https://gitlab.com/{safe_username}",
+        "Bitbucket": f"https://bitbucket.org/{safe_username}",
+        "Docker Hub": f"https://hub.docker.com/u/{safe_username}",
+        "npm": f"https://www.npmjs.com/~{safe_username}",
+        "PyPI": f"https://pypi.org/user/{safe_username}",
+        "Stack Overflow": f"https://stackoverflow.com/users/?q={quote_plus(raw_username)}",
+        "Pastebin": f"https://pastebin.com/u/{safe_username}",
+        "Replit": f"https://replit.com/@{safe_username}",
+        "CodePen": f"https://codepen.io/{safe_username}",
+        "Dribbble": f"https://dribbble.com/{safe_username}",
+        "Behance": f"https://behance.net/{safe_username}",
+        "Vimeo": f"https://vimeo.com/{safe_username}",
+        "Dailymotion": f"https://dailymotion.com/{safe_username}",
+        "VK": f"https://vk.com/{safe_username}",
+        "OK.ru": f"https://ok.ru/{safe_username}",
+        "Quora": f"https://quora.com/profile/{safe_username}",
+        "Clubhouse": f"https://joinclubhouse.com/@{safe_username}",
+        "Cash App": f"https://cash.app/${safe_username}",
+        "Venmo": f"https://venmo.com/{safe_username}",
+        "Fiverr": f"https://fiverr.com/{safe_username}",
+        "Upwork": f"https://upwork.com/freelancers/~{safe_username}",
+        "9GAG": f"https://9gag.com/u/{safe_username}",
+        "MyAnimeList": f"https://myanimelist.net/profile/{safe_username}",
+        "Wattpad": f"https://wattpad.com/user/{safe_username}",
+        "Goodreads": f"https://goodreads.com/{safe_username}",
+        "Last.fm": f"https://last.fm/user/{safe_username}",
+        "Letterboxd": f"https://letterboxd.com/{safe_username}",
+        "Chess.com": f"https://chess.com/member/{safe_username}",
+        "Lichess": f"https://lichess.org/@/{safe_username}",
     }
     
     found = []
@@ -1780,6 +1847,8 @@ def social_media_lookup():
     def check_platform(name, url):
         try:
             r = requests.get(url, headers=headers, timeout=8, allow_redirects=True)
+            if r.status_code in [403, 429, 451]:
+                return ("error", name, f"BLOCKED_{r.status_code}")
             if r.status_code == 200:
                 # Vérifications supplémentaires pour éviter les faux positifs
                 lower_text = r.text.lower()
@@ -1791,7 +1860,7 @@ def social_media_lookup():
             elif r.status_code == 404:
                 return ("not_found", name, url)
             else:
-                return ("not_found", name, url)
+                return ("error", name, f"STATUS_{r.status_code}")
         except requests.exceptions.ConnectionError:
             return ("error", name, url)
         except requests.exceptions.Timeout:
@@ -1843,7 +1912,7 @@ def social_media_lookup():
             "profiles": {name: url for name, url in found},
             "not_found_count": len(not_found),
         }
-        ask_save(f"social_{username}", data)
+    ask_save(f"social_{raw_username}", data)
 
 def email_osint():
     email = get_input("Adresse email")
@@ -2443,66 +2512,6 @@ def report_generator():
 #  SYSTÈME DE MENUS
 # ============================================================
 
-CATEGORIES = {
-    "NETWORK": {
-        "name": "🌐 Network Tools",
-        "description": "Outils réseau et analyse IP",
-        "tools": [
-            ("Ping", ping_ip),
-            ("IP Lookup / Geolocation", ip_lookup),
-            ("Traceroute", traceroute),
-            ("Reverse DNS", reverse_dns),
-            ("Port Scanner", port_scanner),
-            ("TCP Connect Test", tcp_connect_test),
-            ("DNS Records", dns_records),
-            ("WHOIS Lookup", whois_lookup),
-            ("ASN Information", asn_info),
-            ("SSL Certificate Info", ssl_cert_info),
-            ("HTTP Headers Analysis", http_headers),
-            ("Blacklist Check", blacklist_check),
-            ("My IP / Network Info", my_ip_info),
-            ("Subnet Calculator", subnet_calculator),
-        ]
-    },
-    "OSINT": {
-        "name": "🔍 OSINT Tools",
-        "description": "Open Source Intelligence",
-        "tools": [
-            ("Social Media Lookup", social_media_lookup),
-            ("Email OSINT", email_osint),
-            ("Phone Number OSINT", phone_osint),
-            ("Username Search (50+ sites)", username_lookup),
-            ("Domain OSINT (Full)", domain_osint),
-            ("Subdomain Finder", subdomain_finder),
-            ("Google Dork Generator", google_dork_generator),
-            ("Wayback Machine", wayback_machine),
-            ("Breach / Leak Check", haveibeenpwned),
-            ("Image Metadata / EXIF", image_metadata),
-            ("Tech Stack Detector", tech_stack_detector),
-            ("Shodan Search", shodan_search),
-            ("VirusTotal Check", virustotal_check),
-        ]
-    },
-    "WEB": {
-        "name": "🕸 Web Recon",
-        "description": "Audit rapide de surface web et exposition",
-        "tools": [
-            ("URL Recon", url_recon),
-            ("Robots / Sitemap Audit", robots_sitemap_audit),
-            ("HTTP Headers Analysis", http_headers),
-            ("SSL Certificate Info", ssl_cert_info),
-        ]
-    },
-    "REPORTS": {
-        "name": "📊 Rapports & Export",
-        "description": "Génération de rapports et export",
-        "tools": [
-            ("Générer un rapport", report_generator),
-            ("Voir les résultats sauvegardés", lambda: list_saved_results()),
-        ]
-    }
-}
-
 def list_saved_results():
     print_header("RÉSULTATS SAUVEGARDÉS")
     results_dir = CONFIG["results_folder"]
@@ -2526,217 +2535,3 @@ def list_saved_results():
     print(color(f"\n  {'─' * 40}"))
     print_info(f"Total: {len(files)} fichier(s), {total_size/1024:.1f} KB")
 
-# ============================================================
-#  BANNIÈRE
-# ============================================================
-BANNER = """
-    ____  __           ______          
-   / __ )/ /_  _____  / ____/___  _  __
-  / __  / / / / / _ \\/ /_  / __ \\| |/_/
- / /_/ / / /_/ /  __/ __/ / /_/ />  <  
-/_____/_/\\__,_/\\___/_/    \\____/_/|_|  
-
-        OSINT & Network Toolkit
-"""
-
-def show_main_menu():
-    clear()
-    
-    if HAS_PYSTYLE:
-        print(Colorate.Horizontal(Colors.blue_to_cyan, Center.XCenter(BANNER)))
-    else:
-        print(BANNER)
-    
-    print(color(f"  {'═' * 60}"))
-    print(color(f"  ║  BlueFox Tools v{CONFIG['version']} - À but éducatif uniquement"))
-    print(color(f"  ║  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"))
-    print(color(f"  {'═' * 60}\n"))
-    
-    cat_list = list(CATEGORIES.keys())
-    for i, key in enumerate(cat_list, 1):
-        cat = CATEGORIES[key]
-        tool_count = len(cat["tools"])
-        print(color(f"  [{i}] {cat['name']} ({tool_count} outils)"))
-        print(color(f"      {cat['description']}\n"))
-    
-    print(color(f"  [S] Settings / API Keys"))
-    print(color(f"  [Q] Quitter\n"))
-    
-    return cat_list
-
-def show_category_menu(cat_key):
-    clear()
-    cat = CATEGORIES[cat_key]
-    
-    if HAS_PYSTYLE:
-        print(Colorate.Horizontal(Colors.blue_to_cyan, Center.XCenter(f"\n  {cat['name']}\n")))
-    else:
-        print(f"\n  {cat['name']}\n")
-    
-    print(color(f"  {'═' * 60}"))
-    print(color(f"  ║  {cat['description']}"))
-    print(color(f"  {'═' * 60}\n"))
-    
-    tools = cat["tools"]
-    
-    # Affichage sur 2 colonnes si beaucoup d'outils
-    if len(tools) > 8:
-        mid = (len(tools) + 1) // 2
-        for i in range(mid):
-            left = f"  [{i+1:02d}] {tools[i][0]}"
-            if i + mid < len(tools):
-                right = f"[{i+mid+1:02d}] {tools[i+mid][0]}"
-                print(color(f"{left:<35} {right}"))
-            else:
-                print(color(left))
-    else:
-        for i, (name, _) in enumerate(tools, 1):
-            print(color(f"  [{i:02d}] {name}"))
-    
-    print(color(f"\n  [B] ← Retour au menu principal\n"))
-    
-    return tools
-
-def settings_menu():
-    while True:
-        clear()
-        print_header("SETTINGS / API KEYS")
-
-        print_info("Etat actuel de la configuration:\n")
-        for key, meta in API_KEY_FIELDS.items():
-            value = CONFIG.get(key, "")
-            status = "Configured" if value else "Not configured"
-            print(color(f"  {meta['label']:<18} {status:<16} {mask_secret(value)}"))
-
-        print(color(f"\n  {'─' * 40}"))
-        print_info("Other settings:")
-        print_result("Max workers (threads)", str(CONFIG["max_workers"]))
-        print_result("Results folder", CONFIG["results_folder"])
-        print_result("Config file", CONFIG_FILE)
-
-        print(color(f"\n  {'─' * 40}"))
-        print(color("  [1] Edit API keys"))
-        print(color("  [2] Change results folder"))
-        print(color("  [3] Change max workers"))
-        print(color("  [4] Reset API keys"))
-        print(color("  [5] Open API links"))
-        print(color("  [B] Back"))
-
-        choice = get_input("Choice").lower()
-
-        if choice == "b":
-            return
-
-        if choice == "1":
-            for key, meta in API_KEY_FIELDS.items():
-                current = CONFIG.get(key, "")
-                print_info(f"{meta['label']} actuel: {mask_secret(current)}")
-                new_value = get_input(f"Nouvelle clé {meta['label']} (laisser vide pour conserver)")
-                if new_value:
-                    CONFIG[key] = new_value.strip()
-                else:
-                    CONFIG[key] = current
-            save_local_config()
-            print_success("API keys saved locally.")
-            pause()
-
-        elif choice == "2":
-            current = CONFIG.get("results_folder", "results")
-            new_folder = prompt_with_default("Results folder", current)
-            if new_folder:
-                CONFIG["results_folder"] = new_folder
-                ensure_results_folder()
-                save_local_config()
-                print_success("Results folder saved.")
-            pause()
-
-        elif choice == "3":
-            current = str(CONFIG.get("max_workers", 200))
-            new_workers = prompt_with_default("Max workers", current)
-            try:
-                CONFIG["max_workers"] = max(1, int(new_workers))
-                save_local_config()
-                print_success("Max workers saved.")
-            except Exception:
-                print_error("Invalid number.")
-            pause()
-
-        elif choice == "4":
-            for key in API_KEY_FIELDS:
-                CONFIG[key] = ""
-            save_local_config()
-            print_success("API keys cleared.")
-            pause()
-
-        elif choice == "5":
-            print(color(f"\n  {'─' * 40}"))
-            print_info("API links:")
-            print_result("Shodan", "https://account.shodan.io/register")
-            print_result("VirusTotal", "https://www.virustotal.com/gui/join-us")
-            print_result("AbuseIPDB", "https://www.abuseipdb.com/register")
-            print_result("Hunter.io", "https://hunter.io/users/sign_up")
-            print_result("IPGeolocation", "https://ipgeolocation.io/signup")
-            pause()
-
-        else:
-            print_error("Invalid choice")
-            time.sleep(1)
-
-# ============================================================
-#  MAIN
-# ============================================================
-def main():
-    intro_animation()
-    init_rpc()
-    update_rpc("Menu Principal", f"BlueFox Tools v{CONFIG['version']}")
-    
-    while True:
-        try:
-            cat_list = show_main_menu()
-            choice = get_input("Choix").strip().lower()
-            
-            if choice == 'q':
-                clear()
-                print(color("\n  Merci d'avoir utilisé BlueFox Tools! 👋\n"))
-                sys.exit(0)
-            
-            elif choice == 's':
-                settings_menu()
-                pause()
-                continue
-            
-            elif choice.isdigit() and 1 <= int(choice) <= len(cat_list):
-                cat_key = cat_list[int(choice) - 1]
-                
-                while True:
-                    tools = show_category_menu(cat_key)
-                    sub_choice = get_input("Choix").strip().lower()
-                    
-                    if sub_choice == 'b':
-                        break
-                    
-                    elif sub_choice.isdigit() and 1 <= int(sub_choice) <= len(tools):
-                        tool_name, tool_func = tools[int(sub_choice) - 1]
-                        update_rpc(CATEGORIES[cat_key]["name"], tool_name)
-                        
-                        try:
-                            tool_func()
-                        except KeyboardInterrupt:
-                            print_warning("\nInterrompu par l'utilisateur")
-                        except Exception as e:
-                            print_error(f"Erreur: {e}")
-                        
-                        pause()
-                    else:
-                        print_error("Choix invalide")
-                        time.sleep(1)
-            else:
-                print_error("Choix invalide")
-                time.sleep(1)
-        
-        except KeyboardInterrupt:
-            print(color("\n\n  Au revoir! 👋\n"))
-            sys.exit(0)
-
-if __name__ == "__main__":
-    main()

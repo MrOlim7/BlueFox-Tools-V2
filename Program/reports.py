@@ -1,7 +1,6 @@
-from .legacy_tools import list_saved_results, report_generator
+from .tools import list_saved_results, report_generator
 
 TOOLS = [
-    ("Générer un rapport", report_generator),
-    ("Voir les résultats sauvegardés", list_saved_results),
+    ("Generer un rapport", report_generator.run),
+    ("Voir les resultats sauvegardes", list_saved_results.run),
 ]
-

@@ -1,4 +1,4 @@
-from . import network, osint, reports, web
+from . import discovery, intel, network, osint, reports, web
 
 CATEGORIES = {
     "NETWORK": {
@@ -21,5 +21,14 @@ CATEGORIES = {
         "description": "Génération de rapports et export",
         "tools": reports.TOOLS,
     },
+    "DISCOVERY": {
+        "name": "🧭 Discovery Lab",
+        "description": "Découverte réseau, DNS et service fingerprinting",
+        "tools": discovery.TOOLS,
+    },
+    "INTEL": {
+        "name": "🧪 Intel & Forensics",
+        "description": "Analyse IOC, hash, permutations et audits ciblés",
+        "tools": intel.TOOLS,
+    },
 }
-
