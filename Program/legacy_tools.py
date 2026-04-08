@@ -1,5 +1,5 @@
 # ============================================================
-#  BlueFox Tools V2.4 beta - OSINT Edition
+#  BlueFox Tools V2.5 beta - OSINT Edition
 #  À but éducatif uniquement
 # ============================================================
 
@@ -94,7 +94,7 @@ API_KEY_FIELDS = {
 }
 
 CONFIG = {
-    "version": "2.4 beta",
+    "version": "2.5 beta",
     "client_id": "1305534641200959600",
     "ui_theme": os.getenv("BLUEFOX_THEME", "blue"),
     "ipgeo_api_key": os.getenv("IPGEO_API_KEY", ""),
@@ -712,10 +712,15 @@ def my_ip_info():
         print_result("IP Publique", "Impossible de récupérer")
     
     print(color(f"\n  {'─' * 40}"))
-    if platform.system() == "Windows":
+    _plat = platform.system()
+    if _plat == "Windows":
         result = os.popen("ipconfig").read()
+    elif _plat == "Darwin":
+        # macOS — use native ifconfig
+        result = os.popen("ifconfig 2>/dev/null").read()
     else:
-        result = os.popen("ifconfig 2>/dev/null || ip addr").read()
+        # Linux
+        result = os.popen("ifconfig 2>/dev/null || ip addr 2>/dev/null").read()
     print(color(result))
 
 def ssl_cert_info():
