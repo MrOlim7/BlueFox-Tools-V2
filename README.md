@@ -56,7 +56,7 @@ BlueFox.py                 ← Main UI and runtime loop
 start.bat                  ← Windows launcher
 start.sh                   ← Linux / macOS launcher
 Program/
-  legacy_tools.py          ← Shared core utilities + legacy implementations
+  core.py          ← Shared core utilities
   registry.py              ← Category registry used by UI
   network.py               ← Network category bindings
   osint.py                 ← OSINT category bindings

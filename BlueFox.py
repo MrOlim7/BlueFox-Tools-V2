@@ -4,7 +4,7 @@ import time
 import random
 import platform
 
-from Program import legacy_tools as core
+from Program import core
 from Program import registry, settings
 
 APP_VERSION = core.CONFIG.get("version", "2.5 beta")
