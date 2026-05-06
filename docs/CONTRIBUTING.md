@@ -48,7 +48,7 @@ python3 BlueFox.py
 1. Create `Program/tools/<tool_name>.py`
 2. Implement `run()` in that file:
    ```python
-   from Program import core
+   from Program import legacy_tools as core
 
    def run():
        target = core.get_input("Target")
@@ -75,7 +75,7 @@ python3 BlueFox.py
 - Keep code readable and simple.
 - Prefer explicit error handling (`try/except`) over silent failures.
 - Always set timeouts on external network requests.
-- Reuse shared helpers from `core.py` (`print_result`, `print_success`, `ask_save`, etc.).
+- Reuse shared helpers from `legacy_tools.py` (`print_result`, `print_success`, `ask_save`, etc.).
 - Use `core.get_input()` for all user prompts — not raw `input()`.
 
 ---

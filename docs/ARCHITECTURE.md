@@ -39,7 +39,7 @@ The startup sequence, UI loop, and tool dispatch are separated from tool logic.
 └──────────────────────┬──────────────────────────────────┘
                        │ calls
 ┌──────────────────────▼──────────────────────────────────┐
-│  Program/core.py                                │
+│  Program/legacy_tools.py                                │
 │  ─ Shared helpers (color, input, print, save, config)   │
 │  ─ Legacy full-function implementations                 │
 │  ─ Discord RPC wrapper                                  │
